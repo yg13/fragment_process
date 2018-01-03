@@ -28,6 +28,7 @@
 
 #include "vidpro1/process/vidpro1_load_cem_process.h"
 #include "vidpro1/process/vidpro1_load_con_process.h"
+#include "vidpro1/process/vidpro1_save_cem_process.h"
 #include "vidpro1/storage/vidpro1_vsol2D_storage_sptr.h"
 #include "vidpro1/storage/vidpro1_vsol2D_storage.h"
 #include "vidpro1/storage/vidpro1_image_storage_sptr.h"
@@ -268,7 +269,8 @@ int main(int argc, char *argv[])
     // Create empty image stroage
     vidpro1_image_storage_sptr image_storage = vidpro1_image_storage_new();
 
-    shock_pro.parameters()->set_value( "-rms" , (float)0.1 );
+    // Default
+	//shock_pro.parameters()->set_value( "-rms" , (float)0.1 );
 
     // Use input from edge detection
     shock_pro.add_input(image_storage);
@@ -415,121 +417,57 @@ int main(int argc, char *argv[])
 
     }
 
-    vcl_string output_file;
-    if (params->save_to_object_folder_())
+
+
+    //******************** Save Contours  *********************************
+    vcl_cout<<"******* Saving Gap Completion Contours  ************"<<vcl_endl;
     {
-        output_file = params->output_shock_folder_() + "/";
-    }
-    else
-    {
-        output_file = params->input_object_dir_() + "/";
-    }
+        // Grab the underlying contours
+        vidpro1_vsol2D_storage_sptr gap_completions_contour_storage =
+            vidpro1_vsol2D_storage_new();
+        gap_completions_contour_storage.vertical_cast(shock_gt_results[1]);
 
-
-    //dbsk2d_shock_storage_sptr shock_storage;
-    //shock_storage.vertical_cast(shock_gt_results[0]);
-    //vcl_string shock_file = output_file + "/" + params->input_object_name_() +  +"_shock.cem";
-    //vcl_string cem_file = output_file + "/" + params->input_object_name_() + "_con.bnd";
-    //dbsk2d_ishock_transform temp_trans(shock_storage->get_ishock_graph(), dbsk2d_ishock_transform::LOOP);
-    //temp_trans.write_shock_boundary(shock_file);
-    //temp_trans.write_boundary(cem_file);
-
-/*
-    //******************** Sample Shocks  ********************************
-    vcl_cout<<"************  Sampling Shock *************"<<vcl_endl;
-    
-    dbsk2d_sample_ishock_process sample_sg_pro;
-    set_process_parameters_of_bpro1(*params, 
-                                    sample_sg_pro, 
-                                    params->tag_sample_shock_);
-
-
-    // Before we start the process lets clean input output
-    sample_sg_pro.clear_input();
-    sample_sg_pro.clear_output();
-
-    // Use input from either ishock computation or gap_transform
-    if ( params->gap_transform_())
-    {
-        sample_sg_pro.add_input(shock_gt_results[0]);
-    }
-    else
-    {
-        sample_sg_pro.add_input(shock_results[0]);
-    }
-
-    // Kick of process
-    bool sample_status = sample_sg_pro.execute();
-    sample_sg_pro.finish();
-
-    // Grab output from sampling
-    vcl_vector<bpro1_storage_sptr> sample_shock_results;
-    if ( sample_status )
-    {
-        sample_shock_results   = sample_sg_pro.get_output();
-    }
-
-    //Clean up after ourselves
-    sample_sg_pro.clear_input();
-    sample_sg_pro.clear_output();
-
-    if (sample_shock_results.size() != 1) 
-    {
-        vcl_cerr << "Sampling of Intrinsinc Shock Computation Failed"
-                 << vcl_endl;
-        return 1;
-    }
-
-
-    
-    //******************** Save Shocks   ********************************
-    vcl_cout<<"************   Saving  Shock *************"<<vcl_endl;    
-
-    dbsk2d_save_esf_process save_sg_pro;
-    
-    vcl_string output_file;
-    if (params->save_to_object_folder_())
-    { 
-        output_file = params->output_shock_folder_() + "/";
-    }
-    else 
-    {
-        output_file = params->input_object_dir_() + "/";
-    }
+        vcl_string output_file;
+        if (params->save_to_object_folder_())
+        {
+            output_file = params->output_shock_folder_() + "/";
+        }
+        else
+        {
+            output_file = params->input_object_dir_() + "/";
+        }
         
-    if (!vul_file::exists(output_file)) 
-    {
-        vul_file::make_directory(output_file);
+        if (!vul_file::exists(output_file))
+        {
+            vul_file::make_directory(output_file);
         
-    }
+        }
     
-    output_file = output_file + params->input_object_name_()+
-        params->output_extension_();
+        output_file = output_file + params->input_object_name_()+
+            "_GC.cemv";
        
-    bpro1_filepath output(output_file,params->output_extension_());
+        bpro1_filepath output(output_file,".cemv");
 
-    save_sg_pro.parameters()->set_value("-esfoutput",output);
 
-    // Before we start lets clean input output
-    save_sg_pro.clear_input();
-    save_sg_pro.clear_output();
+        // In this everything else, is .cem, .cemv , .cfg, etc
+        vidpro1_save_cem_process save_cem_pro;
+        save_cem_pro.parameters()->set_value("-cemoutput",output);
 
-    save_sg_pro.add_input(sample_shock_results[0]);
-    bool status = save_sg_pro.execute();
-    save_sg_pro.finish();
+        // Before we start the process lets clean input output
+        save_cem_pro.clear_input();
+        save_cem_pro.clear_output();
 
-    //Clean up after ourselves
-    save_sg_pro.clear_input();
-    save_sg_pro.clear_output();
+        // Kick of process
+        save_cem_pro.add_input(gap_completions_contour_storage);
+        bool write_status = save_cem_pro.execute();
+        save_cem_pro.finish();
 
-    if ( !status )
-    {
-        vcl_cerr << "Problems in saving extrinsinc shock file: " 
-                 << output_file << vcl_endl;
-        return 1;
+        //Clean up after ourselves
+        save_cem_pro.clear_input();
+        save_cem_pro.clear_output();
 
     }
-    */
+
 
     double vox_time = t.real()/1000.0;
     t.mark();
@@ -538,4 +476,3 @@ int main(int argc, char *argv[])
 
     return 0;
 }
-

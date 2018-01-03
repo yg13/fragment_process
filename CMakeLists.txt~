@@ -48,8 +48,6 @@ SET(SOURCE_FILES
         vidpro1/process/vidpro1_load_cem_process.h
         vidpro1/process/vidpro1_load_con_process.cxx
         vidpro1/process/vidpro1_load_con_process.h
-        vidpro1/process/vidpro1_save_cem_process.cxx
-        vidpro1/process/vidpro1_save_cem_process.h
 
         dbgl/dbgl_eulerspiral_base.cxx
         dbgl/dbgl_eulerspiral_base.h
